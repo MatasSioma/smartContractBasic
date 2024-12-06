@@ -25,13 +25,13 @@ SECRET_KEY = 'django-insecure-tos9xu-!$iqxcno2y-q($m-@$v+!3xfy0um(8gh-8#!zw&^&h6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['loclhost']
+ALLOWED_HOSTS = ['loclhost:8000', "localhost"]
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'retailOrder',
+    'retail',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
