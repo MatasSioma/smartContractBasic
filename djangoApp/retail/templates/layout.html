@@ -4,8 +4,31 @@
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{%block title%} {% endblock %}</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
 </head>
 <body>
+    <nav>
+        <div id="party-select">
+            <button>Retailer</button>
+            <button>Courier</button>
+        </div>
+    </nav>
     {%block body%} {% endblock %}
 </body>
+<script>
+    let web3;
+
+    async function connectWallet() {
+        if (window.ethereum) {
+            await ethereum.request({ method: 'eth_requestAccounts' });
+            web3 = new Web3(window.ethereum);
+            const accounts = await web3.eth.getAccounts();
+            document.getElementById("walletAddress").innerText = "Wallet: " + accounts[0];
+        } else {
+            alert("Install MetaMask to continue.");
+        }
+    }
+
+    document.getElementById("connectWallet").onclick = connectWallet;
+</script>
 </html>

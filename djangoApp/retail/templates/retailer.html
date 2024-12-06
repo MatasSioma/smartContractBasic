@@ -1,0 +1,12 @@
+{% extends 'layout.html' %}
+
+{%block title%} Index {%endblock%}
+
+{%block body%}
+    <h1>Index</h1>
+    <h3>Pardavėjo puslapis</h3>
+
+    {% for product in products%}
+        <p>{{ product.title }}</p>
+    {%endfor%}
+{%endblock%}
