@@ -12,7 +12,7 @@
     <nav>
         <div id="walletAddress">
             <div>Jūsų piniginės adresas:</div>
-            <span class="walletAddress">Prijunkite piniginę!</span>
+            <span class="wallet-address">Prijunkite piniginę!</span>
         </div>
         <h1>Gamintojas.lt</h1>
         <button id="connectWallet" class="btn btn-secondary">Prijungti piniginę</button>
@@ -28,8 +28,8 @@
             await ethereum.request({ method: 'eth_requestAccounts' });
             web3 = new Web3(window.ethereum);
             const accounts = await web3.eth.getAccounts();
-            document.querySelector(".walletAddress").innerText = accounts[0];
-            document.querySelectorAll('.product input[name="retailer-address"]').forEach((field)=>{
+            document.querySelector(".wallet-address").innerHTML = accounts[0];
+            document.querySelectorAll('input[name="retailer-address"], input[name="courier-address"]').forEach((field)=>{
                 field.value = accounts[0];
             })
         } else {

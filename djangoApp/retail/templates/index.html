@@ -13,10 +13,59 @@
               <span>Kiekis (Quantity): {{popUp.quantity}}</span>
               <div>Užsakovo adresas (Retailer): {{popUp.retailer}}</div>
             {%endif%}
+            {%if popUp.type == "Priced" %}
+              <h5>Užsakymui suteikta kaina!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+              <span>Užsakymo kaina (Order Price): {{popUp.orderPrice}}</span>
+              <span>Siuntimo Kaina (Shipment Price): {{popUp.shipmentPrice}}</span>
+              <span>Suma (Grand Total): {{popUp.grandTotal}}</span>
+            {%endif%}
         </div>
         {%endfor%}
     </div>
+
+<!-- DEBUG -->
+<!-- <div style="display: none;"> -->
+<div class="all-orders">
+    <h5>Visi užsakymai (DEBUG)</h5>
+    <table class="table table-striped">
+        <tr>
+            <th>orderId</th>          
+            <th>retailer</th>
+            <th>courier</th>
+            <th>product</th>
+            <th>quantity</th>
+            <th>weight</th>
+            <th>orderPrice</th>
+            <th>shipmentPrice</th>
+            <th>price</th>
+            <!-- <th>priceETH</th> -->
+            <th>deliveryDate</th>
+            <th>status</th>
+        </tr>   
+        {%for order in orders%}
+        <tr>
+            <td>{{order.orderId}}</td>          
+            <td style="max-width: 10ch; overflow: auto;">{{order.retailer}}</td>
+            <td style="max-width: 10ch; overflow: auto;">{{order.courier}}</td>
+            <td style="max-width: 15ch; overflow: auto; text-wrap: nowrap">{{order.product}}</td>
+            <td>{{order.quantity}}</td>
+            <td>{{order.weight}}</td>
+            <td>{{order.orderPrice}}</td>
+            <td>{{order.shipmentPrice}}</td>
+            <td>{{order.price}}</td>
+            <!-- <td>{{order.priceEth}}</td> -->
+            <td>{{order.deliveryDate}}</td>
+            <td>{{order.status}}</td>
+        </tr>
+        {%endfor%}
+    </table>
+</div>
+
+
+<div class="content">
     <h2>Pardavėjams skirtas puslapis</h2>
+    <h3>Pateikti užsakymą</h3>
     <div class="products">
         {% for product in products%}
             <div class="product">
@@ -36,10 +85,122 @@
             </div>
         {%endfor%}
     </div>
-    <hr>
-    <h2>Gamintojui skirtas puslapis</h2>
+    <h3>Apmokėti užsakymą</h3>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Pavadinimas</th>
+            <th>Kiekis</th>
+            <th>Galutinė kaina(eur)</th>
+            <th>Galutinė kaina(ETH)</th>
+            <th>Mokėjimas</th>
+            <th>Atšaukimas</th>
+        </tr>
+        {%for order in orders%}
+        {%if order.status == "Priced"%}
+        <tr>
+            <form action="/pay" method="post">
+                <input type="hidden" name="id" value="{{order.orderId}}">
+                <td scope="row">{{order.orderId}}</td>
+                <td>{{order.product}}</td>
+                <td>{{order.quantity}}</td>
+                <td>{{order.price}}</td>
+                <td>{{order.priceETH}}</td>
+                <td><input type="submit" class="btn btn-primary" value="Mokėti"></td>
+            </form>
+            <td>
+            <form action="/cancel" method="post">
+                <input type="hidden" name="id" value="{{order.orderId}}">
+                <input type="submit" class="btn btn-danger" value="Atšaukti">
+            </form>
+            </td>
+        </tr>
+        {%endif%}
+        {%empty%}
+        <p>Nėra tokių užsakymų!</p>
+        {%endfor%}
+    </table>
+    <h3>Patvirtinti pristatymą</h3>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Pavadinimas</th>
+            <th>Kiekis</th>
+            <th>Patvirtinimas</th>
+        </tr>
+        {%for order in orders%}
+        {%if order.status == "Paid"%}
+        <tr>
+            <form action="/mark-delivered" method="post">
+                <input type="hidden" name="id" value="{{order.orderId}}">
+                <td scope="row">{{order.orderId}}</td>
+                <td>{{order.product}}</td>
+                <td>{{order.quantity}}</td>
+                <td><input type="submit" class="btn btn-primary" value="Patvirtinti pristatymą"></td>
+            </form>
+        </tr>
+        {%endif%}
+        {%empty%}
+        <p>Nėra tokių užsakymų!</p>
+        {%endfor%}
+    </table>
 
-    {{orders}}
-    <hr>
-    <h2>Kurjeriui skirtas puslapis</h2>
+
+
+
+    <!-- <h2 style="margin-top: 100px;">Gamintojui skirtas puslapis</h2>
+    <h3>Užsakymai</h3>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Pavadinimas</th>
+            <th>Kiekis</th>
+
+        </tr>
+        {%for order in orders%}
+        <tr>
+            <td scope="row">{{order.orderId}}</td>
+            <td>{{order.product}}</td>
+        </tr>
+        {%empty%}
+        <p>Nėra užsakymų!</p>
+        {%endfor%}
+    </table> -->
+
+
+
+
+    <h2 style="margin-top: 100px;">Kurjeriui skirtas puslapis</h2>
+    <h4>Siūlyti siuntimo kaina</h4>
+    <table class="table">
+        <tr>
+            <th>ID</th>
+            <th>Pavadinimas</th>
+            <th>Svoris</th>
+            <th>Siūloma kaina</th>
+            <th>Pristatymo data</th>
+            <th>Pateikti</th>
+        </tr>
+        {%for order in orders%}
+        {%if order.status == "Ordered"%}
+        <tr>
+            <form action="/set-price/" method="post">
+                <input type="hidden" name="id" value="{{order.orderId}}">
+                <input type="hidden" name="quantity" value="{{order.quantity}}">
+                <input type="hidden" name="product" value="{{order.product}}">
+                <input type="hidden" name="courier-address" value="">
+                <td scope="row">{{order.orderId}}</td>
+                <td>{{order.product}}</td>
+                <td>{{order.weight}}</td>
+                <td><input type="number" name="price" step='0.01' value='0.00' required>eur</td>
+                <td><input type="date" name="date" value="2024-12-31" required></td>
+                <td><input type="submit" class="btn btn-primary" value="Siųsti"></td>
+            </form>
+        </tr>
+        {%endif%}
+        {%empty%}
+        <p>Nėra tokių užsakymų!</p>
+        {%endfor%}
+    </table>
+</div>
 {%endblock%}

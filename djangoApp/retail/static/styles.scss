@@ -2,17 +2,31 @@
     box-sizing: border-box;
 }
 
+.content {
+    padding: 10px;
+}
+
+.all-orders {
+    overflow: auto;
+    // position: relative;
+}
+
 nav {
     height: 80px;
     padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    position: sticky;
+    top: 0;
     background-color: rgb(209, 209, 209);
     h1 {
         position: absolute;
         text-align: center;
         left: 40%;
+    }
+    .wallet-address {
+        color: red;
     }
 }
 
