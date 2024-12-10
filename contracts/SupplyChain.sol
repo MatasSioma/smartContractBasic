@@ -22,12 +22,12 @@ contract SupplyChain {
     uint256 public orderCount;
     mapping(uint256 => Order) public orders;
 
-    event OrderCreated(uint256 orderId, address indexed retailer, string product, uint256 quantity);
-    event PriceSent(uint256 orderId, uint256 orderPrice, uint256 shipmentPrice);
-    event InvoiceSent(uint256 orderId, uint256 deliveryDate, string otherData);
-    event OrderDelivered(uint256 orderId);
-    event OrderCancelled(uint256 orderId, string reason);
-    event PaymentReleased(uint256 orderId, address to, uint256 amount);
+    event OrderCreated(uint256 indexed orderId, address retailer, string product, uint256 quantity);
+    event PriceSent(uint256 indexed orderId, uint256 orderPrice, uint256 shipmentPrice);
+    event InvoiceSent(uint256 indexed orderId, uint256 deliveryDate, string otherData);
+    event OrderDelivered(uint256 indexed orderId);
+    event OrderCancelled(uint256 indexed orderId, string reason);
+    event PaymentReleased(uint256 indexed orderId, address to, uint256 amount);
 
     constructor() {
         manufacturer = msg.sender;

@@ -20,41 +20,59 @@ contract = web3.eth.contract(address=config["CONTRACT_ADDRESS"], abi=contractAbi
 MANUFACTURER_ADDRESS = web3.eth.account.from_key(config["MANUFACTURER_PRIVATE_KEY"]).address
 
 # Create your views here.
-def retailer(request):
+def index(request):
     if request.method == "GET":
+        # print(request.GET.get("message").replace("'",'"'))
+        try:
+            popUps = json.loads(request.GET.get("message", "").replace("'",'"'))
+        except:
+            popUps = []
+
         with open(f'{settings.BASE_DIR}/retail/products.json', 'r') as productsf:
             products = json.load(productsf)
-        return render(request, "retailer.html", {"products": products})
-
-def manufacturer(request):
-    return HttpResponseRedirect("/")
-
-def courier(request):
-    return HttpResponseRedirect("/")
+        orderAmount = contract.functions.orderCount().call()
+        orders = []
+        for orderId in range(orderAmount):
+            orders.append(contract.functions.orders(orderId).call())
+        return render(request, "index.html", {"products": products, "popUps": popUps,"orders": orders})
 
 @csrf_exempt
 def send_order(request):
     if request.method == "POST":
         try:
-            data = json.loads(request.body)
-            product = data["product"]
-            quantity = int(data["quantity"])
-            retailer_address = data["retailer_address"]
-
-            # Build the transaction
-            txn = contract.functions.sendOrder(product, quantity).buildTransaction({
-                'from': retailer_address,
+            product = request.POST.get("product")
+            quantity = int(request.POST.get("quantity"))
+            retailer_address = request.POST.get("retailer-address")
+            
+            transaction = contract.functions.createOrder(
+                retailer_address, product, quantity
+            ).build_transaction({
+                'from': MANUFACTURER_ADDRESS,
                 'gas': 2000000,
-                'nonce': web3.eth.getTransactionCount(retailer_address),
+                'nonce': web3.eth.get_transaction_count(MANUFACTURER_ADDRESS),
             })
+            signed_tx = web3.eth.account.sign_transaction(transaction, config["MANUFACTURER_PRIVATE_KEY"])
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            return JsonResponse({"message": "Transaction built successfully.", "txn": txn})
+            events = contract.events.OrderCreated.create_filter(from_block="latest").get_all_entries()
+            message = [
+            {
+                "orderId": event.args.orderId,
+                "retailer": event.args.retailer,
+                "product": event.args.product,
+                "quantity": event.args.quantity,
+                "type": "Created"
+            } for event in events
+            ]
+
+            return HttpResponseRedirect(f"/?message={json.dumps(message).replace("'", '"')}")
         except Exception as e:
-            return JsonResponse({"error": str(e)}, status=400)
+            return JsonResponse({"error": str(e)}, status=500)
         
 def get_order_events(request):
     try:
-        events = contract.events.OrderSent.createFilter(fromBlock="latest").get_all_entries()
+        events = contract.events.OrderCreated.create_filter(from_block="latest").get_all_entries()
         response = [
             {
                 "orderId": event.args.orderId,

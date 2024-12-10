@@ -1,0 +1,45 @@
+{% extends 'layout.html' %}
+
+{%block title%} Index {%endblock%}
+
+{%block body%}
+    <div id="pop-up">
+        {%for popUp in popUps%}
+        <div class="pop-up">
+            {%if popUp.type == "Created" %}
+              <h5>Užsakymas pateiktas sėkmingai!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+              <span>Produktas(Product): {{popUp.product}}</span>
+              <span>Kiekis (Quantity): {{popUp.quantity}}</span>
+              <div>Užsakovo adresas (Retailer): {{popUp.retailer}}</div>
+            {%endif%}
+        </div>
+        {%endfor%}
+    </div>
+    <h2>Pardavėjams skirtas puslapis</h2>
+    <div class="products">
+        {% for product in products%}
+            <div class="product">
+                <img src="{{product.image}}" alt="producto paveiksliukas">
+                <h3>{{ product.title }}</h3>
+                <p>{{ product.category }}</p>
+                <span class="rating">Retingas: {{product.rating.rate}}/5 ({{product.rating.count}})</span>
+                <span class="rating"> Vieneto svoris: {{product.weight}}kg</span>
+                <p>{{product.price}}eur / 10vienetų</p>
+                <form action="/send-order/" class="form-group" method="POST">
+                    <input type="hidden" name="product" value="{{product.title}}">
+                    <input type="hidden" name="retailer-address" value="">
+                    <input type="number" class="form-control" name="quantity" min="10" step="10" placeholder="Kiekis" required>
+                    <input type="submit" class="btn btn-primary" value="Pateikti užsakymą">
+                </form>
+
+            </div>
+        {%endfor%}
+    </div>
+    <hr>
+    <h2>Gamintojui skirtas puslapis</h2>
+
+    {{orders}}
+    <hr>
+    <h2>Kurjeriui skirtas puslapis</h2>
+{%endblock%}
