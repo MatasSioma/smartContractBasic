@@ -353,7 +353,9 @@ const contractABI = [
 				"type": "function"
 			}
 		];
-const contractAddress = "0x2fe6b04652b3FFC4D24127512b89b34fBaebd7Ad";
+const contractAddress = "0x2fe6b04652b3FFC4D24127512b89b34fBaebd7Ad"; //SEPOLIA
+// const contractAddress = "0xeca4dfb822c0c25912E9C3166ED32a15D43d9f01"; //GANACHE
+
 
 async function payOrder(element) {
   // Ensure MetaMask is installed

@@ -9,19 +9,28 @@ import json
 #            0.000000000000003 3k eur
 WEI_IN_EUR = 0.0000000000003
 
-# Connect to the Ethereum node
-web3 = Web3(Web3.HTTPProvider("https://ethereum-sepolia-rpc.publicnode.com"))
-
 with open(f'{settings.BASE_DIR}/retail/config.json', 'r') as cfg:
     config = json.load(cfg)
+
+PROVIDER = "https://ethereum-sepolia-rpc.publicnode.com"
+# PROVIDER = "HTTP://127.0.0.1:7545"
+
+CONTRACT = config["SEPOLIA_CONTRACT_ADDRESS"]
+# CONTRACT = config["GANACHE_CONTRACT_ADDRESS"]
+
+MANUFACTURER_PRIVATE_KEY = config["SEPOLIA_MANUFACTURER_PRIVATE_KEY"]
+# MANUFACTURER_PRIVATE_KEY = config["GANCHE_MANUFACTURER_PRIVATE_KEY"]
+
+# Connect to the Ethereum node
+web3 = Web3(Web3.HTTPProvider("https://ethereum-sepolia-rpc.publicnode.com"))
 
 with open('C:/Programos/smartContractBasic/build/contracts/SupplyChain.json', 'r') as abif:
     contractAbi = json.load(abif)
     contractAbi = contractAbi["abi"]
 
-contract = web3.eth.contract(address=config["CONTRACT_ADDRESS"], abi=contractAbi)
+contract = web3.eth.contract(address=CONTRACT, abi=contractAbi)
 
-MANUFACTURER_ADDRESS = web3.eth.account.from_key(config["MANUFACTURER_PRIVATE_KEY"]).address
+MANUFACTURER_ADDRESS = web3.eth.account.from_key(MANUFACTURER_PRIVATE_KEY).address
 
 # Create your views here.
 def index(request):
@@ -64,11 +73,9 @@ def index(request):
                 if product["title"] == order["product"]:
                     order["weight"] = order["quantity"] * product["weight"]
                     break
-            #1 Wei = WEI_IN_EUR EUR   1ETH = 3k EUR
             if order["grandTotal"] != 0:
                 order["price"] = round(order["grandTotal"] * WEI_IN_EUR, 2)
                 order["priceETH"] = web3.from_wei(order["grandTotal"],'ether')
-                # order["priceETH"] = order["grandTotal"] / 1000000000000000000
 
             orders.append(order)
 
