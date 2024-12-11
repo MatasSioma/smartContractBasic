@@ -55,17 +55,18 @@ def index(request):
                 "shipmentPrice": order[5],
                 "grandTotal": order[6],
                 "deliveryDate": order[7],
-                "otherData": order[8],
-                "status": statusTrans[order[9]],
+                "status": statusTrans[order[8]],
             }
             for product in products:
                 if product["title"] == order["product"]:
                     order["weight"] = order["quantity"] * product["weight"]
                     break
-            #1 Wei = 0.00001971 EUR   2024-12-10
+            #1 Wei = 0.000000000000003 EUR   1ETH = 3k EUR
             if order["grandTotal"] != 0:
-                order["price"] = round(order["grandTotal"] * 0.00001971, 2)
+                order["price"] = round(order["grandTotal"] * 0.000000000000003, 2)
                 order["priceETH"] = web3.from_wei(order["grandTotal"],'ether')
+                # order["priceETH"] = order["grandTotal"] / 1000000000000000000
+
             orders.append(order)
 
         return render(request, "index.html", {"products": products, "popUps": popUps,"orders": orders})
@@ -124,8 +125,8 @@ def set_price(request):
                     orderPrice = round(product["price"] * quantity, 2)
                     break
             
-            orderPrice = int(round(orderPrice / 0.00001971, 0))
-            shipmentPrice = int(round(shipmentPrice / 0.00001971, 0))
+            orderPrice = int(round(orderPrice / 0.000000000000003, 0))
+            shipmentPrice = int(round(shipmentPrice / 0.000000000000003, 0))
 
             transaction = contract.functions.setPrices(
                 orderId, orderPrice, shipmentPrice, deliveryDate, courierAddress
@@ -143,9 +144,9 @@ def set_price(request):
             message = [
             {
                 "orderId": event.args.orderId,
-                "orderPrice": round(orderPrice*0.00001971,2),
-                "shipmentPrice": round(shipmentPrice*0.00001971,2),
-                "grandTotal": round(orderPrice*0.00001971 + shipmentPrice*0.00001971,2),
+                "orderPrice": round(orderPrice*0.000000000000003,2),
+                "shipmentPrice": round(shipmentPrice*0.000000000000003,2),
+                "grandTotal": round(orderPrice*0.000000000000003 + shipmentPrice*0.000000000000003,2),
                 "type": "Priced"
             } for event in events
             ]
@@ -153,3 +154,35 @@ def set_price(request):
             return HttpResponseRedirect(f"/?message={json.dumps(message).replace("'", '"')}")
         except Exception as e:
             return JsonResponse({"error": str(e)}, status=500)
+        
+@csrf_exempt
+def cancel_order(request):
+    if request.method == "POST":
+        try:
+            orderId = int(request.POST.get("id"))
+            retailer = request.POST.get("retailer-address")
+
+            order = contract.functions.orders(orderId).call()
+            if(order[0] != retailer): 
+                print(order[0], retailer)
+                raise Exception("Prijungtas adresas ir užsakovas nesutampa!")
+
+            transaction = contract.functions.cancelOrder(
+                orderId, "SiapSau"
+            ).build_transaction({
+                'from': MANUFACTURER_ADDRESS,
+                'gas': 2000000,
+                'nonce': web3.eth.get_transaction_count(MANUFACTURER_ADDRESS),
+            })
+            signed_tx = web3.eth.account.sign_transaction(transaction, config["MANUFACTURER_PRIVATE_KEY"])
+            tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
+            web3.eth.wait_for_transaction_receipt(tx_hash)
+
+            message = [{"type": "Canceled", "orderId": orderId}]
+
+            return HttpResponseRedirect(f"/?message={json.dumps(message)}")
+        except:
+            return HttpResponseRedirect(f"/?message={json.dumps([{"type": "Error", "message": "Prijungtas adresas ir užsakovas nesutampa!", "retail": order[0], "orderRetail": retailer}])}")
+
+
+

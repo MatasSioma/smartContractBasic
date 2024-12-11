@@ -20,6 +20,15 @@
               <span>Siuntimo Kaina (Shipment Price): {{popUp.shipmentPrice}}</span>
               <span>Suma (Grand Total): {{popUp.grandTotal}}</span>
             {%endif%}
+            {%if popUp.type == "Canceled" %}
+              <h5>Užsakymas atšauktas!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+            {%endif%}
+            {%if popUp.type == "Paid" %}
+              <h5>Užsakymas apmokėtas!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+              <span>Suma (Grand Total): {{popUp.paidAmount}}ETH</span>
+            {%endif%}
         </div>
         {%endfor%}
     </div>
@@ -74,7 +83,7 @@
                 <p>{{ product.category }}</p>
                 <span class="rating">Retingas: {{product.rating.rate}}/5 ({{product.rating.count}})</span>
                 <span class="rating"> Vieneto svoris: {{product.weight}}kg</span>
-                <p>{{product.price}}eur / 10vienetų</p>
+                <p>{{product.price}}eur</p>
                 <form action="/send-order/" class="form-group" method="POST">
                     <input type="hidden" name="product" value="{{product.title}}">
                     <input type="hidden" name="retailer-address" value="">
@@ -99,18 +108,20 @@
         {%for order in orders%}
         {%if order.status == "Priced"%}
         <tr>
-            <form action="/pay" method="post">
+            <form id="pay-form" onsubmit="return false;">
                 <input type="hidden" name="id" value="{{order.orderId}}">
+                <input type="hidden" name="priceETH" value="{{order.priceETH}}">
                 <td scope="row">{{order.orderId}}</td>
                 <td>{{order.product}}</td>
                 <td>{{order.quantity}}</td>
                 <td>{{order.price}}</td>
                 <td>{{order.priceETH}}</td>
-                <td><input type="submit" class="btn btn-primary" value="Mokėti"></td>
+                <td><button class="btn btn-primary" onclick="payOrder(this)">Mokėti</button></td>
             </form>
             <td>
-            <form action="/cancel" method="post">
+            <form action="/cancel/" method="post">
                 <input type="hidden" name="id" value="{{order.orderId}}">
+                <input type="hidden" name="retailer-address" value="">
                 <input type="submit" class="btn btn-danger" value="Atšaukti">
             </form>
             </td>
@@ -131,12 +142,12 @@
         {%for order in orders%}
         {%if order.status == "Paid"%}
         <tr>
-            <form action="/mark-delivered" method="post">
+            <form id="confirm-delivered" onsubmit="return false;">
                 <input type="hidden" name="id" value="{{order.orderId}}">
                 <td scope="row">{{order.orderId}}</td>
                 <td>{{order.product}}</td>
                 <td>{{order.quantity}}</td>
-                <td><input type="submit" class="btn btn-primary" value="Patvirtinti pristatymą"></td>
+                <td><button class="btn btn-primary" onclick="confirmDelivered(this)">Patvirtinti pristatymą</button></td>
             </form>
         </tr>
         {%endif%}

@@ -13,7 +13,6 @@ contract SupplyChain {
         uint256 shipmentPrice;
         uint256 grandTotal;
         uint256 deliveryDate;
-        string otherData;
         OrderStatus status;
     }
 
@@ -24,10 +23,11 @@ contract SupplyChain {
 
     event OrderCreated(uint256 indexed orderId, address retailer, string product, uint256 quantity);
     event PriceSent(uint256 indexed orderId, uint256 orderPrice, uint256 shipmentPrice);
-    event InvoiceSent(uint256 indexed orderId, uint256 deliveryDate, string otherData);
+    event OrderPayed(uint256 indexed orderId);
     event OrderDelivered(uint256 indexed orderId);
     event OrderCancelled(uint256 indexed orderId, string reason);
     event PaymentReleased(uint256 indexed orderId, address to, uint256 amount);
+    event InvoiceSent(uint256 indexed orderId, uint256 deliveryDate);
 
     constructor() {
         manufacturer = msg.sender;
@@ -60,7 +60,6 @@ contract SupplyChain {
             shipmentPrice: 0,
             grandTotal: 0,
             deliveryDate: 0,
-            otherData: "",
             status: OrderStatus.Ordered
         });
 
@@ -83,17 +82,18 @@ contract SupplyChain {
         require(orders[orderId].status == OrderStatus.Priced, "Prices not set yet");
         require(msg.value == orders[orderId].grandTotal, "Incorrect payment amount");
         orders[orderId].status = OrderStatus.Paid;
+
+        emit OrderPayed(orderId);
     }
 
-    function sendInvoice(uint256 orderId, uint256 deliveryDate, string memory otherData) public onlyManufacturer {
+    function sendInvoice(uint256 orderId, uint256 deliveryDate) public onlyManufacturer {
         require(orders[orderId].status == OrderStatus.Paid, "Payment not completed");
         orders[orderId].deliveryDate = deliveryDate;
-        orders[orderId].otherData = otherData;
 
-        emit InvoiceSent(orderId, deliveryDate, otherData);
+        emit InvoiceSent(orderId, deliveryDate);
     }
 
-    function markDelivered(uint256 orderId) public onlyCourier(orderId) {
+    function markDelivered(uint256 orderId) public onlyRetailer(orderId) {
         require(orders[orderId].status == OrderStatus.Paid, "Payment not completed");
         orders[orderId].status = OrderStatus.Delivered;
 
