@@ -6,8 +6,11 @@ from django.conf import settings
 from datetime import datetime
 import json
 
+#            0.000000000000003 3k eur
+WEI_IN_EUR = 0.0000000000003
+
 # Connect to the Ethereum node
-web3 = Web3(Web3.HTTPProvider("HTTP://127.0.0.1:7545"))
+web3 = Web3(Web3.HTTPProvider("https://ethereum-sepolia-rpc.publicnode.com"))
 
 with open(f'{settings.BASE_DIR}/retail/config.json', 'r') as cfg:
     config = json.load(cfg)
@@ -61,9 +64,9 @@ def index(request):
                 if product["title"] == order["product"]:
                     order["weight"] = order["quantity"] * product["weight"]
                     break
-            #1 Wei = 0.000000000000003 EUR   1ETH = 3k EUR
+            #1 Wei = WEI_IN_EUR EUR   1ETH = 3k EUR
             if order["grandTotal"] != 0:
-                order["price"] = round(order["grandTotal"] * 0.000000000000003, 2)
+                order["price"] = round(order["grandTotal"] * WEI_IN_EUR, 2)
                 order["priceETH"] = web3.from_wei(order["grandTotal"],'ether')
                 # order["priceETH"] = order["grandTotal"] / 1000000000000000000
 
@@ -90,15 +93,14 @@ def send_order(request):
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            events = contract.events.OrderCreated.create_filter(from_block="latest").get_all_entries()
+            # events = contract.events.OrderCreated.create_filter(from_block="latest").get_all_entries()
             message = [
             {
-                "orderId": event.args.orderId,
-                "retailer": event.args.retailer,
-                "product": event.args.product,
-                "quantity": event.args.quantity,
+                "retailer": retailer_address,
+                "product": product,
+                "quantity": quantity,
                 "type": "Created"
-            } for event in events
+            }
             ]
 
             return HttpResponseRedirect(f"/?message={json.dumps(message).replace("'", '"')}")
@@ -125,8 +127,8 @@ def set_price(request):
                     orderPrice = round(product["price"] * quantity, 2)
                     break
             
-            orderPrice = int(round(orderPrice / 0.000000000000003, 0))
-            shipmentPrice = int(round(shipmentPrice / 0.000000000000003, 0))
+            orderPrice = int(round(orderPrice / WEI_IN_EUR, 0))
+            shipmentPrice = int(round(shipmentPrice / WEI_IN_EUR, 0))
 
             transaction = contract.functions.setPrices(
                 orderId, orderPrice, shipmentPrice, deliveryDate, courierAddress
@@ -139,16 +141,15 @@ def set_price(request):
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             web3.eth.wait_for_transaction_receipt(tx_hash)
 
-            events = contract.events.PriceSent.create_filter(from_block="latest").get_all_entries()
 
             message = [
             {
-                "orderId": event.args.orderId,
-                "orderPrice": round(orderPrice*0.000000000000003,2),
-                "shipmentPrice": round(shipmentPrice*0.000000000000003,2),
-                "grandTotal": round(orderPrice*0.000000000000003 + shipmentPrice*0.000000000000003,2),
+                "orderId": orderId,
+                "orderPrice": round(orderPrice*WEI_IN_EUR,2),
+                "shipmentPrice": round(shipmentPrice*WEI_IN_EUR,2),
+                "grandTotal": round(orderPrice*WEI_IN_EUR + shipmentPrice*WEI_IN_EUR,2),
                 "type": "Priced"
-            } for event in events
+            }
             ]
 
             return HttpResponseRedirect(f"/?message={json.dumps(message).replace("'", '"')}")
@@ -182,7 +183,7 @@ def cancel_order(request):
 
             return HttpResponseRedirect(f"/?message={json.dumps(message)}")
         except:
-            return HttpResponseRedirect(f"/?message={json.dumps([{"type": "Error", "message": "Prijungtas adresas ir užsakovas nesutampa!", "retail": order[0], "orderRetail": retailer}])}")
+            return HttpResponseRedirect(f"/?message={json.dumps([{"type": "Error", "orderId": orderId, "message": "Prijungtas adresas ir užsakovas nesutampa!", "retail": order[0], "orderRetail": retailer}])}")
 
 
 

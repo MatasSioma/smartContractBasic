@@ -8,7 +8,6 @@
         <div class="pop-up">
             {%if popUp.type == "Created" %}
               <h5>Užsakymas pateiktas sėkmingai!</h5>  
-              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
               <span>Produktas(Product): {{popUp.product}}</span>
               <span>Kiekis (Quantity): {{popUp.quantity}}</span>
               <div>Užsakovo adresas (Retailer): {{popUp.retailer}}</div>
@@ -29,6 +28,15 @@
               <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
               <span>Suma (Grand Total): {{popUp.paidAmount}}ETH</span>
             {%endif%}
+            {%if popUp.type == "Delivered" %}
+              <h5>Užsakymas pristatymas patvirtintas!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+            {%endif%}
+            {%if popUp.type == "Error" %}
+              <h5>Klaida!</h5>  
+              <span>Užsakymo ID (OrderId): {{popUp.orderId}}</span>
+              <span>Žinutė: {{popUp.message}}</span>
+            {%endif%}
         </div>
         {%endfor%}
     </div>
@@ -45,10 +53,10 @@
             <th>product</th>
             <th>quantity</th>
             <th>weight</th>
-            <th>orderPrice</th>
-            <th>shipmentPrice</th>
+            <!-- <th>orderPrice</th> -->
+            <!-- <th>shipmentPrice</th> -->
             <th>price</th>
-            <!-- <th>priceETH</th> -->
+            <th>priceETH</th>
             <th>deliveryDate</th>
             <th>status</th>
         </tr>   
@@ -60,10 +68,10 @@
             <td style="max-width: 15ch; overflow: auto; text-wrap: nowrap">{{order.product}}</td>
             <td>{{order.quantity}}</td>
             <td>{{order.weight}}</td>
-            <td>{{order.orderPrice}}</td>
-            <td>{{order.shipmentPrice}}</td>
+            <!-- <td>{{order.orderPrice}}</td> -->
+            <!-- <td>{{order.shipmentPrice}}</td> -->
             <td>{{order.price}}</td>
-            <!-- <td>{{order.priceEth}}</td> -->
+            <td>{{order.priceETH}}</td>
             <td>{{order.deliveryDate}}</td>
             <td>{{order.status}}</td>
         </tr>
@@ -84,7 +92,7 @@
                 <span class="rating">Retingas: {{product.rating.rate}}/5 ({{product.rating.count}})</span>
                 <span class="rating"> Vieneto svoris: {{product.weight}}kg</span>
                 <p>{{product.price}}eur</p>
-                <form action="/send-order/" class="form-group" method="POST">
+                <form action="/send-order/" onsubmit="waiting()" class="form-group" method="POST">
                     <input type="hidden" name="product" value="{{product.title}}">
                     <input type="hidden" name="retailer-address" value="">
                     <input type="number" class="form-control" name="quantity" min="10" step="10" placeholder="Kiekis" required>
@@ -108,7 +116,7 @@
         {%for order in orders%}
         {%if order.status == "Priced"%}
         <tr>
-            <form id="pay-form" onsubmit="return false;">
+            <form id="pay-form" onsubmit="waiting(); return false;">
                 <input type="hidden" name="id" value="{{order.orderId}}">
                 <input type="hidden" name="priceETH" value="{{order.priceETH}}">
                 <td scope="row">{{order.orderId}}</td>
@@ -119,7 +127,7 @@
                 <td><button class="btn btn-primary" onclick="payOrder(this)">Mokėti</button></td>
             </form>
             <td>
-            <form action="/cancel/" method="post">
+            <form action="/cancel/" method="post" onsubmit="waiting();">
                 <input type="hidden" name="id" value="{{order.orderId}}">
                 <input type="hidden" name="retailer-address" value="">
                 <input type="submit" class="btn btn-danger" value="Atšaukti">
@@ -142,7 +150,7 @@
         {%for order in orders%}
         {%if order.status == "Paid"%}
         <tr>
-            <form id="confirm-delivered" onsubmit="return false;">
+            <form id="confirm-delivered" onsubmit="waiting(); return false;">
                 <input type="hidden" name="id" value="{{order.orderId}}">
                 <td scope="row">{{order.orderId}}</td>
                 <td>{{order.product}}</td>
@@ -195,7 +203,7 @@
         {%for order in orders%}
         {%if order.status == "Ordered"%}
         <tr>
-            <form action="/set-price/" method="post">
+            <form action="/set-price/" onsubmit="waiting();" method="post">
                 <input type="hidden" name="id" value="{{order.orderId}}">
                 <input type="hidden" name="quantity" value="{{order.quantity}}">
                 <input type="hidden" name="product" value="{{order.product}}">

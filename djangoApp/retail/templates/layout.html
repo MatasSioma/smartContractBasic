@@ -33,8 +33,20 @@
                 field.value = accounts[0];
             })
         } else {
-            alert("Install MetaMask to continue.");
+            alert("Install MetaMask to continue. And reload the page");
         }
+    }
+
+    connectWallet();
+
+    function waiting() {
+        header = document.querySelector("h1");
+        header.innerText = "Laukiama čekio";
+    }
+
+    function waitingRevert() {
+        header = document.querySelector("h1");
+        header.innerText = "Gamintojas.lt"
     }
 
     document.getElementById("connectWallet").onclick = connectWallet;
