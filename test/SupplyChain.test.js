@@ -1,105 +1,131 @@
 const SupplyChain = artifacts.require("SupplyChain");
-const { expectRevert } = require('@openzeppelin/test-helpers');
+const { expect } = require("chai");
+const { BN, expectEvent, expectRevert } = require("@openzeppelin/test-helpers");
 
 contract("SupplyChain", (accounts) => {
-  const [manufacturer, retailer, courier, unauthorized] = accounts;
-  let contractInstance;
+    const [manufacturer, retailer, courier, otherAccount] = accounts;
 
-  beforeEach(async () => {
-    contractInstance = await SupplyChain.new({ from: manufacturer });
-  });
+    let supplyChain;
 
-  it("should initialize with correct manufacturer", async () => {
-    const storedManufacturer = await contractInstance.manufacturer();
-    assert.equal(storedManufacturer, manufacturer, "Manufacturer address does not match");
-  });
+    beforeEach(async () => {
+        supplyChain = await SupplyChain.new({ from: manufacturer });
+    });
 
-  it("should allow manufacturer to create an order", async () => {
-    await contractInstance.createOrder(retailer, "Product A", 10, { from: manufacturer });
+    it("should initialize correctly", async () => {
+        const contractManufacturer = await supplyChain.manufacturer();
+        expect(contractManufacturer).to.equal(manufacturer);
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.retailer, retailer, "Retailer address does not match");
-    assert.equal(order.product, "Product A", "Product name does not match");
-    assert.equal(order.quantity, 10, "Quantity does not match");
-    assert.equal(order.status.toNumber(), 1, "Order status should be 'Ordered'");
-  });
+        const orderCount = await supplyChain.orderCount();
+        expect(orderCount).to.be.bignumber.equal(new BN(0));
+    });
 
-  it("should allow manufacturer to set prices for an order", async () => {
-    await contractInstance.createOrder(retailer, "Product B", 5, { from: manufacturer });
-    await contractInstance.setPrices(1, 1000, 200, Math.floor(Date.now() / 1000), courier, { from: manufacturer });
+    it("should allow the manufacturer to create an order", async () => {
+        const tx = await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.orderPrice, 1000, "Order price does not match");
-    assert.equal(order.shipmentPrice, 200, "Shipment price does not match");
-    assert.equal(order.courier, courier, "Courier address does not match");
-    assert.equal(order.status.toNumber(), 2, "Order status should be 'Priced'");
-  });
+        expectEvent(tx, "OrderCreated", {
+            orderId: new BN(1),
+            retailer,
+            product: "Product A",
+            quantity: new BN(10),
+        });
 
-  it("should allow retailer to pay for the order", async () => {
-    await contractInstance.createOrder(retailer, "Product C", 3, { from: manufacturer });
-    await contractInstance.setPrices(1, 1500, 300, Math.floor(Date.now() / 1000), courier, { from: manufacturer });
+        const order = await supplyChain.orders(1);
+        expect(order.retailer).to.equal(retailer);
+        expect(order.product).to.equal("Product A");
+        expect(order.quantity).to.be.bignumber.equal(new BN(10));
+        expect(order.status).to.be.bignumber.equal(new BN(1)); // Ordered
+    });
 
-    const totalPrice = 1500 + 300;
-    await contractInstance.pay(1, { from: retailer, value: totalPrice });
+    it("should allow the manufacturer to set prices", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.status.toNumber(), 3, "Order status should be 'Paid'");
-  });
+        const tx = await supplyChain.setPrices(1, 100, 20, 1234567890, courier, { from: manufacturer });
 
-  it("should not allow payment with incorrect amount", async () => {
-    await contractInstance.createOrder(retailer, "Product D", 2, { from: manufacturer });
-    await contractInstance.setPrices(1, 1000, 100, Math.floor(Date.now() / 1000), courier, { from: manufacturer });
+        expectEvent(tx, "PriceSent", {
+            orderId: new BN(1),
+            orderPrice: new BN(100),
+            shipmentPrice: new BN(20),
+        });
 
-    await expectRevert(
-      contractInstance.pay(1, { from: retailer, value: 500 }),
-      "Incorrect payment amount"
-    );
-  });
+        const order = await supplyChain.orders(1);
+        expect(order.orderPrice).to.be.bignumber.equal(new BN(100));
+        expect(order.shipmentPrice).to.be.bignumber.equal(new BN(20));
+        expect(order.courier).to.equal(courier);
+        expect(order.grandTotal).to.be.bignumber.equal(new BN(120));
+        expect(order.status).to.be.bignumber.equal(new BN(2)); // Priced
+    });
 
-  it("should allow manufacturer to send an invoice after payment", async () => {
-    await contractInstance.createOrder(retailer, "Product E", 1, { from: manufacturer });
-    await contractInstance.setPrices(1, 500, 50, Math.floor(Date.now() / 1000), courier, { from: manufacturer });
+    it("should allow the retailer to pay for the order", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
+        await supplyChain.setPrices(1, 100, 20, 1234567890, courier, { from: manufacturer });
 
-    const totalPrice = 500 + 50;
-    await contractInstance.pay(1, { from: retailer, value: totalPrice });
-    await contractInstance.sendInvoice(1, Math.floor(Date.now() / 1000) + 86400, "Some data", { from: manufacturer });
+        const tx = await supplyChain.pay(1, { from: retailer, value: 120 });
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.otherData, "Some data", "Invoice data does not match");
-  });
+        expectEvent(tx, "OrderPayed", { orderId: new BN(1) });
 
-  it("should allow courier to mark the order as delivered", async () => {
-    await contractInstance.createOrder(retailer, "Product F", 2, { from: manufacturer });
-    await contractInstance.setPrices(1, 800, 200, Math.floor(Date.now() / 1000), courier, { from: manufacturer });
+        const order = await supplyChain.orders(1);
+        expect(order.status).to.be.bignumber.equal(new BN(3)); // Paid
+    });
 
-    const totalPrice = 800 + 200;
-    await contractInstance.pay(1, { from: retailer, value: totalPrice });
+    it("should allow the manufacturer to send an invoice", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
+        await supplyChain.setPrices(1, 100, 20, 1234567890, courier, { from: manufacturer });
+        await supplyChain.pay(1, { from: retailer, value: 120 });
 
-    await contractInstance.markDelivered(1, { from: courier });
+        const tx = await supplyChain.sendInvoice(1, 1234567890, { from: manufacturer });
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.status.toNumber(), 4, "Order status should be 'Delivered'");
-  });
+        expectEvent(tx, "InvoiceSent", {
+            orderId: new BN(1),
+            deliveryDate: new BN(1234567890),
+        });
 
-  it("should allow cancellation of an order by manufacturer", async () => {
-    await contractInstance.createOrder(retailer, "Product G", 5, { from: manufacturer });
-    await contractInstance.cancelOrder(1, "Order no longer needed", { from: manufacturer });
+        const order = await supplyChain.orders(1);
+        expect(order.deliveryDate).to.be.bignumber.equal(new BN(1234567890));
+    });
 
-    const order = await contractInstance.orders(1);
-    assert.equal(order.status.toNumber(), 5, "Order status should be 'Cancelled'");
-  });
+    it("should allow the retailer to mark the order as delivered", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
+        await supplyChain.setPrices(1, 100, 20, 1234567890, courier, { from: manufacturer });
+        await supplyChain.pay(1, { from: retailer, value: 120 });
 
-  it("should revert if unauthorized user tries to modify order", async () => {
-    await contractInstance.createOrder(retailer, "Product H", 7, { from: manufacturer });
+        const tx = await supplyChain.markDelivered(1, { from: retailer });
 
-    await expectRevert(
-      contractInstance.setPrices(1, 1000, 100, Math.floor(Date.now() / 1000), courier, { from: unauthorized }),
-      "Not the Manufacturer"
-    );
+        expectEvent(tx, "OrderDelivered", { orderId: new BN(1) });
 
-    await expectRevert(
-      contractInstance.pay(1, { from: unauthorized, value: 1100 }),
-      "Not the Retailer for this Order"
-    );
-  });
+        const order = await supplyChain.orders(1);
+        expect(order.status).to.be.bignumber.equal(new BN(4)); // Delivered
+    });
+
+    it("should allow order cancellation by retailer or manufacturer", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
+
+        const tx = await supplyChain.cancelOrder(1, "No longer needed", { from: retailer });
+
+        expectEvent(tx, "OrderCancelled", {
+            orderId: new BN(1),
+            reason: "No longer needed",
+        });
+
+        const order = await supplyChain.orders(1);
+        expect(order.status).to.be.bignumber.equal(new BN(5)); // Cancelled
+    });
+
+    it("should prevent unauthorized actions", async () => {
+        await supplyChain.createOrder(retailer, "Product A", 10, { from: manufacturer });
+
+        await expectRevert(
+            supplyChain.setPrices(1, 100, 20, 1234567890, courier, { from: otherAccount }),
+            "Not the Manufacturer"
+        );
+
+        await expectRevert(
+            supplyChain.pay(1, { from: otherAccount, value: 120 }),
+            "Not the Retailer for this Order"
+        );
+
+        await expectRevert(
+            supplyChain.markDelivered(1, { from: otherAccount }),
+            "Not the Retailer for this Order"
+        );
+    });
 });

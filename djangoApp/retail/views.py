@@ -12,17 +12,17 @@ WEI_IN_EUR = 0.0000000000003
 with open(f'{settings.BASE_DIR}/retail/config.json', 'r') as cfg:
     config = json.load(cfg)
 
-PROVIDER = "https://ethereum-sepolia-rpc.publicnode.com"
-# PROVIDER = "HTTP://127.0.0.1:7545"
+# PROVIDER = "https://ethereum-sepolia-rpc.publicnode.com"
+PROVIDER = "HTTP://127.0.0.1:7545"
 
-CONTRACT = config["SEPOLIA_CONTRACT_ADDRESS"]
-# CONTRACT = config["GANACHE_CONTRACT_ADDRESS"]
+# CONTRACT = config["SEPOLIA_CONTRACT_ADDRESS"]
+CONTRACT = config["GANACHE_CONTRACT_ADDRESS"]
 
-MANUFACTURER_PRIVATE_KEY = config["SEPOLIA_MANUFACTURER_PRIVATE_KEY"]
-# MANUFACTURER_PRIVATE_KEY = config["GANCHE_MANUFACTURER_PRIVATE_KEY"]
+# MANUFACTURER_PRIVATE_KEY = config["SEPOLIA_MANUFACTURER_PRIVATE_KEY"]
+MANUFACTURER_PRIVATE_KEY = config["GANACHE_MANUFACTURER_PRIVATE_KEY"]
 
 # Connect to the Ethereum node
-web3 = Web3(Web3.HTTPProvider("https://ethereum-sepolia-rpc.publicnode.com"))
+web3 = Web3(Web3.HTTPProvider(PROVIDER))
 
 with open('C:/Programos/smartContractBasic/build/contracts/SupplyChain.json', 'r') as abif:
     contractAbi = json.load(abif)
@@ -96,7 +96,7 @@ def send_order(request):
                 'gas': 2000000,
                 'nonce': web3.eth.get_transaction_count(MANUFACTURER_ADDRESS),
             })
-            signed_tx = web3.eth.account.sign_transaction(transaction, config["MANUFACTURER_PRIVATE_KEY"])
+            signed_tx = web3.eth.account.sign_transaction(transaction, MANUFACTURER_PRIVATE_KEY)
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             web3.eth.wait_for_transaction_receipt(tx_hash)
 
@@ -134,8 +134,8 @@ def set_price(request):
                     orderPrice = round(product["price"] * quantity, 2)
                     break
             
-            orderPrice = int(round(orderPrice / WEI_IN_EUR, 0))
-            shipmentPrice = int(round(shipmentPrice / WEI_IN_EUR, 0))
+            orderPrice = int(orderPrice / WEI_IN_EUR)
+            shipmentPrice = int(shipmentPrice / WEI_IN_EUR)
 
             transaction = contract.functions.setPrices(
                 orderId, orderPrice, shipmentPrice, deliveryDate, courierAddress
@@ -144,7 +144,7 @@ def set_price(request):
                 'gas': 2000000,
                 'nonce': web3.eth.get_transaction_count(MANUFACTURER_ADDRESS),
             })
-            signed_tx = web3.eth.account.sign_transaction(transaction, config["MANUFACTURER_PRIVATE_KEY"])
+            signed_tx = web3.eth.account.sign_transaction(transaction, MANUFACTURER_PRIVATE_KEY)
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             web3.eth.wait_for_transaction_receipt(tx_hash)
 
@@ -182,7 +182,7 @@ def cancel_order(request):
                 'gas': 2000000,
                 'nonce': web3.eth.get_transaction_count(MANUFACTURER_ADDRESS),
             })
-            signed_tx = web3.eth.account.sign_transaction(transaction, config["MANUFACTURER_PRIVATE_KEY"])
+            signed_tx = web3.eth.account.sign_transaction(transaction, MANUFACTURER_PRIVATE_KEY)
             tx_hash = web3.eth.send_raw_transaction(signed_tx.raw_transaction)
             web3.eth.wait_for_transaction_receipt(tx_hash)
 
